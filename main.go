@@ -6,6 +6,7 @@ import (
   "sort"
   "flag"
   "github.com/Songmu/prompter"
+  "path/filepath"
 )
 
 type FileInfos []os.FileInfo
@@ -22,15 +23,6 @@ func (fi FileInfos) Less(i, j int) bool {
 }
 
 func main(){
-  // 引数の数の確認
-  // if len(os.Args) != 2 {
-  //   fmt.Println("argument error.")
-  //   os.Exit(1)
-  // }
-
-  // 引数を格納
-  //dir_path := os.Args[1]
-
   // 引数の取得にflagを利用
   var arg string
   flag.StringVar(&arg, "f", "", "directory path")
@@ -38,7 +30,6 @@ func main(){
 
   // カレントディレクトリのパスを取得
   var curDir, _ = os.Getwd()
-//  curDir += "/"
 
   // -fオプションに何も入力されていない場合、カレントディレクトリ
   if arg == "" {
@@ -52,10 +43,15 @@ func main(){
 
   // 処理対象のパスをセット
   dir_path := arg
+  // パスの最後が"/"でなかった場合、追加
+  if dir_path[len(dir_path)-1:] != "/" {
+    dir_path += "/"
+  }
   if !(prompter.YN("Diretcory path OK? " + dir_path, false)) {
       fmt.Println("stop process.")
       os.Exit(0)
   }
+
 
   // パスの情報を取得
   fInfo, err := os.Stat(dir_path)
@@ -76,21 +72,29 @@ func main(){
     os.Exit(1)
   }
 
-  // ファイル一覧表示(sort前)
-  for index, fileInfo := range fileInfos {
-    fmt.Printf("index:%d name:%s\t", index, fileInfo.Name())
-    fmt.Printf("mtime:%s\n", fileInfo.ModTime())
-  }
-
   //sort処理
   sort.Sort(FileInfos(fileInfos))
 
-  fmt.Println("\nafter sort.")
   // ファイル一覧表示(sort後)
-  fmt.Println(fileInfos[0].Name())
   for index, fileInfo := range fileInfos {
-    fmt.Printf("index:%d name:%s\t", index, fileInfo.Name())
-    fmt.Printf("mtime:%s\n", fileInfo.ModTime())
+    // 001からとしたいので、+1
+    var index_str string = fmt.Sprint(index+1)
+
+    // 000 の3桁にする
+    if index < 9 {
+      index_str = "00" + index_str
+    } else if index < 99 {
+      index_str = "0" + index_str
+    }
+
+    // 拡張子を取得し、リネームするファイル名につける
+    pos := filepath.Ext(fileInfo.Name())
+    index_str += pos
+
+    // リネーム
+    if err := os.Rename(dir_path+fileInfo.Name(), dir_path+index_str ); err != nil {
+      fmt.Println(err)
+    }
   }
 
 }
